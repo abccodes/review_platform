@@ -12,6 +12,7 @@ const generateToken = (res: Response, userId: string) => {
     secure: false,
     sameSite: 'lax',
     maxAge: 60 * 60 * 1000, // 1 hour
+    path: '/', // Ensure cookie is available for all paths
   });
 };
 

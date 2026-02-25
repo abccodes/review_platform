@@ -39,7 +39,8 @@ class Game {
     const values: (string | number)[] = [];
 
     if (query) {
-      sql += ' AND title LIKE ?';
+      // Use case-insensitive search
+      sql += ' AND LOWER(title) LIKE LOWER(?)';
       values.push(`%${query}%`);
     }
 
@@ -57,6 +58,21 @@ class Game {
     if (gameMode) {
       sql += ' AND game_mode = ?';
       values.push(gameMode);
+    }
+
+    // Order by relevance: exact match first, then starts with, then contains
+    if (query) {
+      sql += ` ORDER BY 
+        CASE 
+          WHEN LOWER(title) = LOWER(?) THEN 1
+          WHEN LOWER(title) LIKE LOWER(?) THEN 2
+          ELSE 3
+        END,
+        review_rating DESC,
+        updated_at DESC`;
+      values.push(query, `${query}%`);
+    } else {
+      sql += ' ORDER BY review_rating DESC, updated_at DESC';
     }
 
     const [rows] = await pool.query(sql, values);
@@ -100,20 +116,40 @@ class Game {
     return (rows as GameInterface[])[0] || null;
   };
 
-  getAllGames = async (limit: number = 50): Promise<GameInterface[]> => {
-    const sql = 'SELECT * FROM games LIMIT ?';
+  getAllGames = async (limit?: number): Promise<GameInterface[]> => {
     const pool = getPool();
+    let sql = 'SELECT * FROM games';
+    
+    if (limit && limit > 0) {
+      sql += ' LIMIT ?';
+      console.log(`Executing SQL: ${sql} with limit = ${limit}`);
+      const [rows] = await pool.query(sql, [limit]);
+      return rows as GameInterface[];
+    } else {
+      console.log(`Executing SQL: ${sql} (no limit - getting all games)`);
+      const [rows] = await pool.query(sql);
+      return rows as GameInterface[];
+    }
+  };
 
-    console.log(`Executing SQL: ${sql} with limit = ${limit}`);
-
+  getTopRatedGames = async (limit: number): Promise<GameInterface[]> => {
+    // Order by most recently added/updated first (trending), then by rating
+    // This shows recently trending games rather than obscure high-rated ones
+    const sql = `
+      SELECT * FROM games
+      ORDER BY updated_at DESC, created_at DESC, review_rating DESC
+      LIMIT ?
+    `;
+    const pool = getPool();
     const [rows] = await pool.query(sql, [limit]);
     return rows as GameInterface[];
   };
 
-  getTopRatedGames = async (limit: number): Promise<GameInterface[]> => {
+  getRandomGames = async (limit: number): Promise<GameInterface[]> => {
     const sql = `
-      SELECT * FROM games
-      ORDER BY review_rating DESC, updated_at DESC
+      SELECT *
+      FROM games
+      ORDER BY RAND()
       LIMIT ?
     `;
     const pool = getPool();

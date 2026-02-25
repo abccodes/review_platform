@@ -6,70 +6,107 @@
 }
 
 body {
-  font-family: Arial, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+  color: #2b2223;
+  background-color: #f6ecec;
+  line-height: 1.5;
 }
 
 /* Banner Section */
 .banner {
-  height: 16.67vh; /* 1/6 of the viewport height */
+  height: 16vh;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  /*picture related code*/
-  position: relative; /* Make this relative for the absolute positioning of .banner-picture */
-  overflow: hidden; /* Prevent overflow if the image goes outside */
+  position: relative;
+  overflow: hidden;
+  padding: 0 3rem;
 }
 
 .banner-picture {
-  background-image: url('bannerpic.png'); /* Replace with your image path */
-  background-size: cover; /* Ensure the image covers the entire banner */
-  background-position: center; /* Center the image */
-  position: absolute; /* Position it absolutely within the banner */
-  top: 0; /* Aligns to the top */
-  left: 0; /* Aligns to the left */
-  right: 0; /* Stretches to the right */
-  bottom: 0; /* Stretches to the bottom */
-  z-index: 1; /* Places it behind the content */
-  filter: grayscale(100%); /* Apply black and white filter */
-  background-blend-mode: luminosity;
+  background-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.55),
+      rgba(0, 0, 0, 0.7)
+    ),
+    url('bannerpic.png');
+  background-size: cover;
+  background-position: center;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  filter: grayscale(100%) contrast(1.05);
 }
 
 .banner-content {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   width: 100%;
-  padding: 0 20px;
-  position: relative; /* Keeps the content above the banner picture */
-  z-index: 2; /* Ensures content appears above the background */
+  max-width: 1200px;
+  padding: 0.5rem 1.5rem;
+  background: linear-gradient(
+    to right,
+    rgba(0, 0, 0, 0.35),
+    rgba(0, 0, 0, 0)
+  );
+  backdrop-filter: blur(4px);
+  border-radius: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .title {
-  font-size: x-large;
-  align-self: center;
-  font-family: Arial, Helvetica, sans-serif;
-  color: white;
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  color: #ffffff;
+  margin-bottom: 0.1rem;
+}
+
+.subtitle {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .buttons {
   display: flex;
   align-items: center;
+  gap: 0.75rem;
 }
 
 .pill-button {
-  padding: 10px 20px;
-  border-radius: 50px;
-  margin-left: 10px;
-  border: 1px solid black;
-  background: none;
+  padding: 10px 22px;
+  border-radius: 999px;
+  margin-left: 0;
+  border: none;
   cursor: pointer;
-  background-color: #c0aeae;
+  background-color: rgba(249, 216, 214, 0.9);
   text-decoration: none; /* Remove underline */
-  color: inherit;
+  color: #3e2e2f;
+  font-weight: 600;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: background 0.2s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .pill-button:hover {
-  color: inherit;
+  background-color: rgba(240, 196, 193, 0.95);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
 }
 
 /* Section below the banner*/
@@ -80,17 +117,26 @@ body {
   margin-top: 0;
   width: 100%;
   min-height: 100vh;
-  padding-top: 2.5vh;
-  background-color: #f4e6e6;
+  padding-top: 3vh;
+  padding-bottom: 4rem;
+  background: radial-gradient(
+    circle at top left,
+    #ffe9e4 0,
+    #f4e6e6 35%,
+    #f0dfe1 100%
+  );
 }
 
 /* Search Bar */
 .search-bar {
+  background-color: #fff;
+  border-radius: 999px;
+  padding: 0.75rem 1.25rem;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 75%;
-  margin-bottom: 2vh;
+  width: min(900px, 90vw);
+  margin-bottom: 2.5vh;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
 }
 
 .search-input-container {
@@ -101,14 +147,13 @@ body {
 }
 
 .search-input {
-  width: 80%;
-  padding: 15px 15px;
-  padding-left: 50px; /* Adjusted padding for the image */
-  border-radius: 50px;
-  border: 1px solid #898989;
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: 999px;
+  border: none;
   outline: none;
-  font-size: 16px; /* Adjust font size */
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  font-size: 0.95rem;
+  box-shadow: none;
 }
 
 .search-icon {
@@ -119,23 +164,28 @@ body {
 }
 
 .search-button {
-  padding: 15px 30px;
-  border-radius: 50px;
-  border: 1px solid #898989;
-  background-color: #c0aeae;
-  margin-left: 15px;
-  font-weight: 900;
+  padding: 0.7rem 1.6rem;
+  border-radius: 999px;
+  border: none;
+  background-color: #3e2e2f;
+  margin-left: 0.75rem;
+  font-weight: 600;
+  color: #fff;
   cursor: pointer;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.18);
+  transition: background 0.2s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .search-input::placeholder {
   color: #ccc;
-  font-size: 16px; /* Ensure the placeholder font size is appropriate */
+  font-size: 0.95rem; /* Ensure the placeholder font size is appropriate */
 }
 
 .search-button:hover {
-  background-color: #b39393;
+  background-color: #241618;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.22);
 }
 
 .advanced-search {
@@ -144,29 +194,65 @@ body {
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1rem;
-  padding: 2rem 1rem;
-  width: 90%;
-  margin: 0 auto;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.5rem;
+  padding: 2rem 1.5rem 0;
+  width: min(1200px, 100%);
 }
 
 .game-tile {
   text-align: center;
-  width: 175px;
-  height: 175px;
-  background-color: #c0aeae;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
 }
-.game-tile img {
-  width: 150px; /* Fit the image to the width of the tile */
-  height: 150px; /* Maintain the aspect ratio */
-  object-fit: cover; /* Ensures it covers the tile area without distortion */
-  border-radius: 5px;
+
+.game-tile:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+.game-image-container {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background-color: #f0f0f0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-cover-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.game-tile:hover .game-cover-image {
+  transform: scale(1.05);
+}
+
+.game-title {
+  padding: 8px 10px 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #3e2e2f;
+  line-height: 1.4;
+  height: 52px; /* fixed title bar height for all cards */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  word-wrap: break-word;
+  overflow: hidden;
 }
 
 .pill-dropdown {
@@ -301,13 +387,14 @@ body {
 }
 
 footer {
-  background-color: #f4e6e6;
-  font-size: 15px;
-  padding: 20px 0;
+  background-color: transparent;
+  font-size: 0.8rem;
+  padding: 1.5rem 0 1rem;
   text-align: center;
   position: relative;
   bottom: 0;
   width: 100%;
+  color: #9a8b8c;
 }
 
 .footer-links {
@@ -322,12 +409,13 @@ footer {
 }
 
 .footer-links a {
-  color: #999595;
+  color: inherit;
   text-decoration: none;
+  opacity: 0.8;
 }
 
 .footer-links a:hover {
-  text-decoration: underline;
+  opacity: 1;
 }
 
 .back-home {

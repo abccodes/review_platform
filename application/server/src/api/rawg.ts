@@ -47,8 +47,11 @@ const getMostPopularGames = async (
   limit: number = 500
 ): Promise<GameData[]> => {
   try {
+    // Use -added to get trending games (most recently added/trending)
+    // Or use -relevance for most relevant/popular games
+    // -rating alone gives obscure games with few high ratings
     const response = await fetch(
-      `https://api.rawg.io/api/games?ordering=-rating&key=${RAWG_API_KEY}&page_size=${limit}`
+      `https://api.rawg.io/api/games?ordering=-added&key=${RAWG_API_KEY}&page_size=${limit}`
     );
     if (!response.ok) {
       console.error(
@@ -63,6 +66,178 @@ const getMostPopularGames = async (
     console.error('Error fetching most popular games:', error);
     return [];
   }
+};
+
+const searchGamesOnRAWG = async (
+  query: string,
+  limit: number = 20
+): Promise<GameData[]> => {
+  try {
+    // Use -relevance for better search results, then filter for quality
+    // Fetch more results than needed so we can filter out low-quality games
+    const fetchLimit = Math.min(limit * 5, 100); // Get 5x results to filter from (more aggressive filtering)
+    
+    console.log(`Searching RAWG API for: "${query}" (fetching ${fetchLimit} results)`);
+    
+    const response = await fetch(
+      `https://api.rawg.io/api/games?search=${encodeURIComponent(query)}&key=${RAWG_API_KEY}&page_size=${fetchLimit}&ordering=-relevance,-rating,-metacritic`
+    );
+    if (!response.ok) {
+      console.error(
+        `Failed to search games on RAWG: ${response.statusText}`
+      );
+      return [];
+    }
+    const data = await response.json();
+    let results = data.results || [];
+    
+    console.log(`RAWG API returned ${results.length} results before filtering`);
+    
+    // Filter out low-quality/obscure games
+    results = filterQualityGames(results, query);
+    
+    console.log(`After filtering: ${results.length} results`);
+    
+    // Return top results after filtering
+    return results.slice(0, limit);
+  } catch (error) {
+    console.error('Error searching games on RAWG:', error);
+    return [];
+  }
+};
+
+// Known legitimate publishers for popular franchises
+const LEGITIMATE_PUBLISHERS: { [key: string]: string[] } = {
+  'fortnite': ['Epic Games', 'Epic Games, Inc.'],
+  'call of duty': ['Activision', 'Activision Blizzard', 'Activision Publishing'],
+  'minecraft': ['Mojang Studios', 'Microsoft', 'Xbox Game Studios'],
+  'grand theft auto': ['Rockstar Games', 'Take-Two Interactive'],
+  'fifa': ['EA Sports', 'Electronic Arts'],
+  'assassin\'s creed': ['Ubisoft'],
+};
+
+// Suspicious title patterns that indicate off-brand/knockoff games
+const SUSPICIOUS_PATTERNS = [
+  /pack/i,
+  /demo/i,
+  /looping/i,
+  /basics/i,
+  /field trip/i,
+  /pictures pack/i,
+  /images pack/i,
+  /test/i,
+  /alpha/i,
+  /beta/i,
+  /prototype/i,
+  /fan made/i,
+  /fanmade/i,
+  /unofficial/i,
+  /mod/i,
+  /custom/i,
+];
+
+// Filter games to keep obvious junk out but allow most real games through
+const filterQualityGames = (games: GameData[], searchQuery: string): GameData[] => {
+  const searchLower = searchQuery.toLowerCase().trim();
+
+  return games
+    .filter(game => {
+      // Filter out games with very obviously junky titles (image packs, demos, etc.)
+      const hasSuspiciousPattern = SUSPICIOUS_PATTERNS.some(pattern =>
+        pattern.test(game.name)
+      );
+      if (hasSuspiciousPattern) {
+        console.log(`Filtered out suspicious game: ${game.name}`);
+        return false;
+      }
+
+      // Require a real cover image so cards look good
+      if (!game.background_image) {
+        return false;
+      }
+
+      // Very light rating filter – basically let most real games through
+      const rating = game.rating || 0;
+      if (rating < 1.5) {
+        return false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const aTitleLower = a.name.toLowerCase();
+      const bTitleLower = b.name.toLowerCase();
+
+      // Prioritize exact title matches first
+      const aExactMatch = aTitleLower === searchLower;
+      const bExactMatch = bTitleLower === searchLower;
+      if (aExactMatch && !bExactMatch) return -1;
+      if (!aExactMatch && bExactMatch) return 1;
+
+      // Then prioritize titles that start with the search query
+      const aStartsWith = aTitleLower.startsWith(searchLower);
+      const bStartsWith = bTitleLower.startsWith(searchLower);
+      if (aStartsWith && !bStartsWith) return -1;
+      if (!aStartsWith && bStartsWith) return 1;
+
+      // Then prioritize by rating (higher is better)
+      const aRating = a.rating || 0;
+      const bRating = b.rating || 0;
+      if (Math.abs(aRating - bRating) > 0.1) {
+        return bRating - aRating;
+      }
+
+      // Then by metacritic if available
+      const aMetacritic = a.metacritic || 0;
+      const bMetacritic = b.metacritic || 0;
+      if (aMetacritic !== bMetacritic) {
+        return bMetacritic - aMetacritic;
+      }
+
+      return 0;
+    });
+};
+
+// Convert RAWG API game data to database format
+const convertRAWGGameToDBFormat = (rawgGame: GameData): any => {
+  const description = stripHtmlTags(rawgGame.description) || '';
+  const genre = rawgGame.genres?.map((g: any) => g.name).join(', ') || null;
+  const tags = rawgGame.tags?.map((tag: any) => tag.name) || [];
+  const platforms = rawgGame.platforms?.map((p: any) => p.platform.name) || [];
+  const playtime_estimate = rawgGame.playtime || 0;
+  const developer =
+    rawgGame.developers?.length > 0 ? rawgGame.developers[0].name : 'Unknown';
+  const publisher =
+    rawgGame.publishers?.length > 0 ? rawgGame.publishers[0].name : 'Unknown';
+
+  // Determine game_mode based on tags or platforms
+  const lowerCaseTags = JSON.stringify(tags).toLowerCase();
+  const lowerCasePlatforms = JSON.stringify(platforms).toLowerCase();
+  let game_mode: string = 'single-player';
+  if (lowerCaseTags.includes('multiplayer') || lowerCasePlatforms.includes('multiplayer')) {
+    game_mode = 'multiplayer';
+  } else if (lowerCaseTags.includes('co-op') || lowerCaseTags.includes('cooperative')) {
+    game_mode = 'both';
+  }
+
+  // Validate and clamp review_rating
+  const rawRating = rawgGame.rating || 0;
+  const review_rating = Math.min(Math.max(Math.round(rawRating), 1), 10);
+
+  return {
+    title: rawgGame.name,
+    description,
+    genre,
+    tags,
+    platforms,
+    playtime_estimate,
+    developer,
+    publisher,
+    game_mode,
+    release_date: rawgGame.released,
+    review_rating,
+    cover_image: rawgGame.background_image,
+  };
 };
 
 const getGameById = async (gameId: number): Promise<GameData | null> => {
@@ -198,7 +373,7 @@ const fetchNewGames = async (maxFetch: number = 50): Promise<any[]> => {
 };
 
 const testAddGames = async () => {
-  const amountOfGames = 50;
+  const amountOfGames = 150;
 
   try {
     console.log('Fetching new games...');
@@ -283,4 +458,6 @@ export {
   fetchNewGames,
   testAddGames,
   getMostPopularGames,
+  searchGamesOnRAWG,
+  convertRAWGGameToDBFormat,
 };

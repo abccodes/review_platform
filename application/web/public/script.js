@@ -1,4 +1,5 @@
 let userId = null; // Global variable to store the logged-in user's ID
+const USE_FEATURED_SCREENSHOT_GAMES = true; // Temporary: force specific games for portfolio screenshot
 
 document.addEventListener('DOMContentLoaded', async () => {
   const logoutButton = document.getElementById('logout-btn');
@@ -12,7 +13,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const googleLoginButton = document.getElementById('google-login-button');
 
   try {
-    const response = await fetch('http://127.0.0.1:8000/api/games/populate', {
+    // Fetch games - ask server for a random mix to keep the homepage varied
+    const response = await fetch('/api/games/populate?limit=150&sort=random', {
       method: 'GET',
       credentials: 'include',
     });
@@ -29,13 +31,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       games.forEach(game => {
         const gameTile = document.createElement('div');
         gameTile.className = 'game-tile';
-        gameTile.textContent = game.title;
+
+        const gameImageContainer = document.createElement('div');
+        gameImageContainer.className = 'game-image-container';
 
         const gameImage = document.createElement('img');
         gameImage.src = game.cover_image || 'gameinfo_testimage.png';
         gameImage.alt = game.title;
+        gameImage.className = 'game-cover-image';
 
-        gameTile.appendChild(gameImage);
+        const gameTitle = document.createElement('div');
+        gameTitle.className = 'game-title';
+        gameTitle.textContent = game.title;
+
+        gameImageContainer.appendChild(gameImage);
+        gameTile.appendChild(gameImageContainer);
+        gameTile.appendChild(gameTitle);
 
         gameTile.addEventListener('click', () => {
           window.location.href = `game-info.html?gameId=${game.game_id}`;
@@ -46,12 +57,87 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   } catch (error) {
     console.error('Error fetching populateGames:', error);
+    // Show error message to user
+    const gameGrid = document.getElementById('gameGrid');
+    if (gameGrid) {
+      gameGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">Unable to load games. Please check that the database is running.</p>';
+    }
   }
+
+  // TEMP: override homepage with specific games in a fixed order for portfolio screenshot
+  const loadFeaturedScreenshotGames = async () => {
+    if (!USE_FEATURED_SCREENSHOT_GAMES || !gameGrid) return;
+
+    const featuredTitles = [
+      'Red Dead Redemption 2',
+      'Expedition 33',
+      'Minecraft',
+      'The Last of Us',
+      'Hollow Knight',
+      'Resident Evil 2',
+      'Call of Duty: Black Ops',
+      'Tomb Raider',
+      'Borderlands 2',
+      'Portal 2',
+      'Rocket League',
+      'Batman: Arkham Knight',
+    ];
+
+    const featuredGames = [];
+
+    for (const title of featuredTitles) {
+      try {
+        const response = await fetch(
+          `/api/games/search?query=${encodeURIComponent(title)}`,
+          { credentials: 'include' }
+        );
+        if (!response.ok) continue;
+        const games = await response.json();
+        if (Array.isArray(games) && games.length > 0) {
+          featuredGames.push(games[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching featured game', title, err);
+      }
+    }
+
+    if (!featuredGames.length) return;
+
+    gameGrid.innerHTML = '';
+    featuredGames.forEach(game => {
+      const gameTile = document.createElement('div');
+      gameTile.className = 'game-tile';
+
+      const gameImageContainer = document.createElement('div');
+      gameImageContainer.className = 'game-image-container';
+
+      const gameImage = document.createElement('img');
+      gameImage.src = game.cover_image || 'gameinfo_testimage.png';
+      gameImage.alt = game.title;
+      gameImage.className = 'game-cover-image';
+
+      const gameTitle = document.createElement('div');
+      gameTitle.className = 'game-title';
+      gameTitle.textContent = game.title;
+
+      gameImageContainer.appendChild(gameImage);
+      gameTile.appendChild(gameImageContainer);
+      gameTile.appendChild(gameTitle);
+
+      gameTile.addEventListener('click', () => {
+        window.location.href = `game-info.html?gameId=${game.game_id}`;
+      });
+
+      gameGrid.appendChild(gameTile);
+    });
+  };
+
+  await loadFeaturedScreenshotGames();
 
   // Check Authentication Status
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/auth/status', {
+      const response = await fetch('/api/auth/status', {
         method: 'GET',
         credentials: 'include',
       });
@@ -86,6 +172,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
+  // Check auth status on page load
+  await checkAuthStatus();
+
   // Login Logic
   const loginForm = document.querySelector('.login-form');
   if (loginForm && loginForm.id !== 'signup-form') {
@@ -95,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const password = loginForm.password.value;
 
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/auth/login', {
+        const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -135,14 +224,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
 
       try {
-        const response = await fetch(
-          'http://127.0.0.1:8000/api/auth/register',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, email, profile_pic, password }),
-          }
-        );
+        const response = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, profile_pic, password }),
+        });
 
         if (response.ok) {
           alert('Account created successfully! You can now log in.');
@@ -163,7 +249,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     logoutButton.addEventListener('click', async event => {
       event.preventDefault();
       try {
-        const response = await fetch('http://127.0.0.1:8000/api/auth/logout', {
+        const response = await fetch('/api/auth/logout', {
           method: 'POST',
           credentials: 'include',
         });
@@ -196,7 +282,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         const response = await fetch(
-          `http://127.0.0.1:8000/api/userdata/${userId}/recommendations`,
+          `/api/userdata/${userId}/recommendations`,
           {
             credentials: 'include',
           }
@@ -246,7 +332,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Google Login
   if (googleLoginButton) {
     googleLoginButton.addEventListener('click', () => {
-      window.location.href = 'http://127.0.0.1:8000/api/auth/google';
+      window.location.href = '/api/auth/google';
     });
   }
   // Update Profile Information/Settings
@@ -261,13 +347,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/users/${userId}`,
-        {
-          method: 'GET',
-          credentials: 'include',
-        }
-      );
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'GET',
+        credentials: 'include',
+      });
 
       if (response.ok) {
         const user = await response.json();
@@ -316,14 +399,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
           // Send the image to your server
-          const response = await fetch(
-            'http://127.0.0.1:8000/api/users/upload-profile-picture',
-            {
-              method: 'POST',
-              body: formData,
-              credentials: 'include', // Include credentials if needed
-            }
-          );
+          const response = await fetch('/api/users/upload-profile-picture', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include', // Include credentials if needed
+          });
 
           if (response.ok) {
             const data = await response.json();
@@ -350,37 +430,52 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (searchTerm) {
         try {
           const response = await fetch(
-            `http://127.0.0.1:8000/api/games/search?query=${encodeURIComponent(
-              searchTerm
-            )}`,
+            `/api/games/search?query=${encodeURIComponent(searchTerm)}`,
             {
               credentials: 'include',
             }
           );
 
-          const games = await response.json();
-          if (!response.ok) throw new Error('Network response was not ok');
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ message: 'Network response was not ok' }));
+            throw new Error(errorData.message || 'Network response was not ok');
+          }
 
-          console.log(games);
+          const games = await response.json();
+          console.log('Search results:', games);
+          
+          // Handle empty array (no games found)
+          if (!games || games.length === 0) {
+            const gameGrid = document.getElementById('gameGrid');
+            if (gameGrid) {
+              gameGrid.innerHTML = '<p style="text-align: center; padding: 20px; color: #666;">No games found. Try a different search term.</p>';
+            }
+            return;
+          }
 
           gameGrid.innerHTML = '';
 
           games.forEach(game => {
             const gameTile = document.createElement('div');
             gameTile.className = 'game-tile';
-            gameTile.textContent = game.title;
+
+            const gameImageContainer = document.createElement('div');
+            gameImageContainer.className = 'game-image-container';
 
             const gameImage = document.createElement('img');
             gameImage.src = game.cover_image
               ? game.cover_image
               : 'gameinfo_testimage.png';
             gameImage.alt = game.title;
-            gameTile.appendChild(gameImage);
-            gameImage.src = game.cover_image
-              ? game.cover_image
-              : 'gameinfo_testimage.png';
-            gameImage.alt = game.title;
-            gameTile.appendChild(gameImage);
+            gameImage.className = 'game-cover-image';
+
+            const gameTitle = document.createElement('div');
+            gameTitle.className = 'game-title';
+            gameTitle.textContent = game.title;
+
+            gameImageContainer.appendChild(gameImage);
+            gameTile.appendChild(gameImageContainer);
+            gameTile.appendChild(gameTitle);
 
             gameTile.addEventListener('click', () => {
               window.location.href = `game-info.html?gameId=${game.game_id}`;
@@ -389,6 +484,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           });
         } catch (error) {
           console.error('Error fetching games:', error);
+          const gameGrid = document.getElementById('gameGrid');
+          if (gameGrid) {
+            gameGrid.innerHTML = `<p style="text-align: center; padding: 20px; color: #666;">${error instanceof Error ? error.message : 'Error searching for games. Please try again.'}</p>`;
+          }
         }
       } else {
         alert('Please enter a search term');

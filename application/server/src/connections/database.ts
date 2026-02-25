@@ -1,7 +1,11 @@
 import { createPool, Pool } from 'mysql2/promise';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+
+dotenv.config({
+  path: path.resolve(__dirname, '../../.env'),
+});
 
 let pool: Pool | undefined;
 
